@@ -9,6 +9,7 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
+mod color;
 mod frame;
 mod sketch;
 mod sketches;

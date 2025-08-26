@@ -24,6 +24,24 @@ impl Frame {
         self.data[idx + 2] = b;
         self.data[idx + 3] = 255; // opaque alpha
     }
+    #[inline]
+    pub fn put_rgb_f32(&mut self, x: u32, y: u32, r: f32, g: f32, b: f32) {
+        if x >= self.w || y >= self.h {
+            return;
+        }
+
+        #[inline]
+        fn to_u8(v: f32) -> u8 {
+            let v = v.max(0.0).min(1.0);
+            (v * 255.0 + 0.5) as u8
+        }
+
+        let idx = ((y * self.w + x) as usize) * 4;
+        self.data[idx] = to_u8(r);
+        self.data[idx + 1] = to_u8(g);
+        self.data[idx + 2] = to_u8(b);
+        self.data[idx + 3] = 255;
+    }
 
     pub fn iter(&self) -> FrameIter {
         FrameIter {
