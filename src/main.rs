@@ -15,7 +15,8 @@ mod sketches;
 
 use frame::Frame;
 use sketch::Sketch;
-use sketches::simple::Simple;
+// use sketches::simple::Simple;
+use sketches::plasma::Plasma as MySketch;
 
 const W: u32 = 64;
 const H: u32 = 64;
@@ -34,7 +35,7 @@ fn run(event_loop: EventLoop<()>, window: Window) {
 
     // --- animation state ---
     let mut frame = Frame::new(W, H);
-    let mut sketch: Box<dyn Sketch> = Box::new(Simple);
+    let mut sketch: Box<dyn Sketch> = Box::new(MySketch);
     let start = Instant::now();
 
     event_loop
