@@ -1,11 +1,11 @@
 ## sixty4
 
-Tiny 64×64 rendering playground for generative sketches and embedded displays. The core crate provides a small `Frame` buffer, a `Sketch` trait, and a couple of example sketches. A desktop runner lives under `examples/` using `winit` + `pixels` to visualize frames at pixel-perfect scale.
+Tiny 64×64 rendering playground for generative sketches and embedded displays. Workspace layout: `core` (library + examples) and `firmware` (embedded). The `core` crate provides a small `Frame` buffer and a `Sketch` trait. The desktop runner lives under `core/examples/` using `winit` + `pixels` to visualize frames at pixel-perfect scale.
 
 ### Features
 - **Minimal API**: `Frame` (RGBA8 buffer), `Sketch` trait with `render(t, frame)`.
 - **Examples included**: `plasma` and `simple` sketches.
-- **Embedded-friendly**: the root binary `src/main.rs` is an embedded-oriented stub; desktop rendering is an example, not a dependency of the main binary.
+- **Embedded-friendly**: the `firmware` crate contains an embedded-oriented stub; desktop rendering stays in `core/examples` and is not a dependency of firmware.
 
 ### Requirements
 - Rust toolchain (stable is fine).
@@ -24,7 +24,7 @@ cargo run --example desktop --release
 ```
 
 ### Switching sketches in the desktop example
-Open `examples/desktop.rs` and change the alias used for `MySketch`.
+Open `core/examples/desktop.rs` and change the alias used for `MySketch`.
 
 Current:
 ```rust
@@ -64,21 +64,24 @@ use your_module::MySketch as MySketch;
 
 ### Project layout
 ```
-src/
-  color.rs        # tiny HSV -> RGB helper
-  frame.rs        # Frame buffer + iterator
-  sketch.rs       # Sketch trait
-  sketches/       # built-in sketches
-    plasma.rs
-    simple.rs
-  lib.rs          # library entry
-  main.rs         # embedded-oriented stub main
-examples/
-  desktop.rs      # desktop runner (winit + pixels)
+core/
+  src/
+    color.rs        # tiny HSV -> RGB helper
+    frame.rs        # Frame buffer + iterator
+    sketch.rs       # Sketch trait
+    sketches/       # built-in sketches
+      plasma.rs
+      simple.rs
+    lib.rs          # library entry
+  examples/
+    desktop.rs      # desktop runner (winit + pixels)
+firmware/
+  src/
+    main.rs         # embedded-oriented stub main
 ```
 
 ### Embedded use
-- `src/main.rs` is intentionally minimal so the crate can be integrated into embedded targets without pulling desktop windowing dependencies into the main binary.
-- Use the `Frame` type and your `Sketch` to drive your display (e.g., an LED matrix). The crate currently uses `std` (e.g., `Vec<u8>`); ensure your target provides an allocator if required.
+- `firmware/src/main.rs` is intentionally minimal so the embedded crate can be integrated into targets without pulling desktop windowing dependencies.
+- Use the `Frame` type and your `Sketch` to drive your display (e.g., an LED matrix). The `core` crate uses `std` (e.g., `Vec<u8>`); ensure your target provides an allocator if you integrate `core` into no_std firmware.
 
 

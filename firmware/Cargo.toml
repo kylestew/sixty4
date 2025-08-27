@@ -1,0 +1,10 @@
+[package]
+name = "sixty4-firmware"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cortex-m = "0.7"
+cortex-m-rt = "0.7"
+# panic handler and hal placeholder - adjust to your actual MCU/hal
+panic-probe = { version = "0.3", features = ["print-defmt"] }

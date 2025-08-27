@@ -1,0 +1,6 @@
+[default.general]
+chip = "RP235x"
+
+[default.reset]
+enabled = true
+halt_afterwards = false
