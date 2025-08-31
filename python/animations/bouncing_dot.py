@@ -1,9 +1,6 @@
 import numpy as np
 
 
-GridSize = None  # unused; derive from output buffer
-
-
 def bouncing_dot(frame_index: int, t_seconds: float, out: np.ndarray) -> None:
     out.fill(0)
     h, w, _ = out.shape

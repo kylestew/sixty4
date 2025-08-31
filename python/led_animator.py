@@ -362,8 +362,8 @@ def main() -> None:
     grid_height = int(
         os.environ.get("LED_GRID_HEIGHT", legacy_size or str(default_height))
     )
-    pixel_scale = int(os.environ.get("LED_PIXEL_SCALE", "10"))
-    target_fps = int(os.environ.get("LED_TARGET_FPS", "60"))
+    pixel_scale = int(os.environ.get("LED_PIXEL_SCALE", "8"))
+    target_fps = int(os.environ.get("LED_TARGET_FPS", "24"))
     app = AnimatorApp(
         grid_width=grid_width,
         grid_height=grid_height,

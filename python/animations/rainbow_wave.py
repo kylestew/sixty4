@@ -3,9 +3,6 @@ from typing import Tuple
 import numpy as np
 
 
-GridSize = None  # unused; derive from output buffer
-
-
 def _hsv_to_rgb(h: np.ndarray, s: np.ndarray, v: np.ndarray) -> np.ndarray:
     h = np.mod(h, 1.0) * 6.0
     i = np.floor(h).astype(int)
