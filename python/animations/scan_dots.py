@@ -16,6 +16,11 @@ def cascading_dots(frame_index: int, t_seconds: float, out: np.ndarray) -> None:
     # TODO: change the random section every T seconds but keep moving down
     # Make the random section larger
 
+    # TODO: top section is dithered noise
+    # Or repeating regular patterns
+
+    # shift left/right after shifting down?
+
     # Draw a new random set of dots on the top N rows
     # Hash-based pseudo-random mask per (x,y), stable for a given frame_index
     N = 20
@@ -30,15 +35,31 @@ def cascading_dots(frame_index: int, t_seconds: float, out: np.ndarray) -> None:
     # Clear top N rows
     out[0:N, :, :] = 0
 
-    # Generate unique random pattern for each row
-    for y in range(N):
-        n = (x * np.uint64(374761393)) ^ (
-            np.uint64(stable_frame + y) * np.uint64(668265263)
-        )
-        n ^= (n >> np.uint64(13)) * np.uint64(1274126177)
-        n ^= n >> np.uint64(16)
-        mask = (n & np.uint64(255)) < np.uint64(64)  # ~25% density
+    # Generate hashed pattern for top rows
+    # Create indices for all pixels in top N rows
+    indices = np.arange(N * w, dtype=np.uint64)
 
-        out[y, mask, 0] = 255
-        out[y, mask, 1] = 255
-        out[y, mask, 2] = 255
+    # Select every other index
+    mask = indices % 2 == 0
+
+    # Convert to row/col coordinates
+    rows = indices[mask] // w
+    cols = indices[mask] % w
+
+    # Set selected pixels to white
+    out[rows, cols, 0] = 255
+    out[rows, cols, 1] = 255
+    out[rows, cols, 2] = 255
+
+    # # Generate unique random pattern for each row
+    # for y in range(N):
+    #     n = (x * np.uint64(374761393)) ^ (
+    #         np.uint64(stable_frame + y) * np.uint64(668265263)
+    #     )
+    #     n ^= (n >> np.uint64(13)) * np.uint64(1274126177)
+    #     n ^= n >> np.uint64(16)
+    #     mask = (n & np.uint64(255)) < np.uint64(64)  # ~25% density
+
+    #     out[y, mask, 0] = 255
+    #     out[y, mask, 1] = 255
+    #     out[y, mask, 2] = 255
