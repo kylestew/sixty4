@@ -8,21 +8,19 @@ license = "MIT OR Apache-2.0"
 cortex-m = "0.7"
 cortex-m-rt = "0.7"
 embedded-hal = { version = "1.0.0" }
-sixty4 = { path = "../sixty4" }
-
 defmt = "1"
 defmt-rtt = "1"
 panic-probe = { version = "1", features = ["print-defmt"] }
-
 # We're using a Pico 2 by default on this template
-#rp-pico2 = "0.9" # TODO: Do we have that crate already ?
-
+# rp-pico2 = "0.9" # TODO: Do we have that crate already ?
 # If you're not going to use a Board Support Package you'll need these:
 rp235x-hal = { version = "0.3", features = [
-    "rt",
-    "critical-section-impl",
-    "binary-info",
+  "rt",
+  "critical-section-impl",
+  "binary-info",
 ] }
+
+# sixty4 = { path = "../sixty4" }
 
 # cargo build/run
 [profile.dev]
@@ -35,7 +33,7 @@ overflow-checks = true
 [profile.release]
 debug = 2
 debug-assertions = false
-lto = 'fat'
+lto = "fat"
 opt-level = 2
 overflow-checks = false
 
@@ -63,5 +61,5 @@ overflow-checks = true
 [profile.bench]
 debug = 2
 debug-assertions = false
-lto = 'fat'
+lto = "fat"
 opt-level = 3

@@ -61,7 +61,11 @@ fn main() -> ! {
     // If you have a Pico W and want to toggle a LED with a simple GPIO output pin, you can connect an external
     // LED to one of the GPIO pins, and reference that pin here. Don't forget adding an appropriate resistor
     // in series with the LED.
-    let mut led_pin = pins.gpio25.into_push_pull_output();
+    let mut led_pin = pins.gpio18.into_push_pull_output();
+
+    // OH NO, THIS IS AN SK6812 RGB LED
+    // example of WS2812, will need to learn and adapt
+    https://github.com/rp-rs/rp-hal-boards/blob/main/boards/rp-pico/examples/pico_ws2812_led.rs
 
     loop {
         info!("on!");
