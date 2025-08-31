@@ -17,7 +17,7 @@ except Exception as exc:  # pragma: no cover - runtime import guard
     ) from exc
 
 
-GridFrameFunc = Callable[[int, float], np.ndarray]
+GridFrameFunc = Callable[[int, float, np.ndarray], None]
 AnimationTuple = Tuple[str, GridFrameFunc]
 
 
@@ -35,14 +35,17 @@ class AnimatorApp:
 
     def __init__(
         self,
-        grid_size: int = 64,
-        pixel_scale: int = 12,
+        grid_width: int = 64,
+        grid_height: int = 128,
+        pixel_scale: int = 10,
         target_fps: int = 60,
         animations_module_name: str = "animations",
     ) -> None:
-        self.grid_size: int = grid_size
+        self.grid_width: int = grid_width
+        self.grid_height: int = grid_height
         self.pixel_scale: int = pixel_scale
-        self.window_size: int = grid_size * pixel_scale
+        self.window_width_px: int = grid_width * pixel_scale
+        self.window_height_px: int = grid_height * pixel_scale
         self.target_fps: int = target_fps
 
         self.animations_module_name: str = animations_module_name
@@ -59,10 +62,15 @@ class AnimatorApp:
         self.speed_multiplier: float = 1.0
         self.sim_time_seconds: float = 0.0
         self.frame_index: int = 0
+        self.frame_buffer: np.ndarray = np.zeros(
+            (self.grid_height, self.grid_width, 3), dtype=np.uint8
+        )
 
         pygame.init()
-        pygame.display.set_caption("64x64 LED Animator")
-        self.screen = pygame.display.set_mode((self.window_size, self.window_size))
+        pygame.display.set_caption(f"{self.grid_width}x{self.grid_height} LED Animator")
+        self.screen = pygame.display.set_mode(
+            (self.window_width_px, self.window_height_px)
+        )
         self.clock = pygame.time.Clock()
         try:
             self.font = pygame.font.SysFont("monospace", 14)
@@ -203,30 +211,29 @@ class AnimatorApp:
         self, func: GridFrameFunc, frame_index: int, t_seconds: float
     ) -> np.ndarray:
         try:
-            frame = func(frame_index, t_seconds)
+            func(frame_index, t_seconds, self.frame_buffer)
         except Exception:
             traceback.print_exc()
             return self._error_frame()
 
-        if not isinstance(frame, np.ndarray):
-            return self._error_frame()
-
+        # Validate buffer integrity
+        fb = self.frame_buffer
         if (
-            frame.ndim != 3
-            or frame.shape[:2] != (self.grid_size, self.grid_size)
-            or frame.shape[2] != 3
+            not isinstance(fb, np.ndarray)
+            or fb.ndim != 3
+            or fb.shape[:2] != (self.grid_height, self.grid_width)
+            or fb.shape[2] != 3
         ):
             return self._error_frame()
-
-        if frame.dtype != np.uint8:
-            frame = np.clip(frame, 0, 255).astype(np.uint8)
-
-        return frame
+        if fb.dtype != np.uint8:
+            np.clip(fb, 0, 255, out=fb)
+            self.frame_buffer = fb.astype(np.uint8, copy=False)
+        return self.frame_buffer
 
     def _error_frame(self) -> np.ndarray:
-        frame = np.zeros((self.grid_size, self.grid_size, 3), dtype=np.uint8)
-        frame[:, :, 0] = 64
-        return frame
+        self.frame_buffer.fill(0)
+        self.frame_buffer[:, :, 0] = 64
+        return self.frame_buffer
 
     def _draw_grid(self) -> None:
         if not self.show_grid:
@@ -234,10 +241,16 @@ class AnimatorApp:
         color = (48, 48, 48)
         step = self.pixel_scale
         width = max(2, self.pixel_scale // 8)
-        for i in range(1, self.grid_size):
+        for i in range(1, self.grid_width):
             x = i * step
-            pygame.draw.line(self.screen, color, (x, 0), (x, self.window_size), width)
-            pygame.draw.line(self.screen, color, (0, x), (self.window_size, x), width)
+            pygame.draw.line(
+                self.screen, color, (x, 0), (x, self.window_height_px), width
+            )
+        for i in range(1, self.grid_height):
+            y = i * step
+            pygame.draw.line(
+                self.screen, color, (0, y), (self.window_width_px, y), width
+            )
 
     def _draw_overlay_text(self) -> None:
         if not self.font:
@@ -256,7 +269,9 @@ class AnimatorApp:
         arr = np.transpose(frame_array, (1, 0, 2))
         surf = pygame.surfarray.make_surface(arr)
         if self.pixel_scale != 1:
-            surf = pygame.transform.scale(surf, (self.window_size, self.window_size))
+            surf = pygame.transform.scale(
+                surf, (self.window_width_px, self.window_height_px)
+            )
         self.screen.blit(surf, (0, 0))
         self._draw_grid()
         self._draw_overlay_text()
@@ -328,18 +343,32 @@ class AnimatorApp:
                 continue
 
             name, func = self.animations[self.current_index]
-            pygame.display.set_caption(f"64x64 LED Animator - {name}")
+            pygame.display.set_caption(
+                f"{self.grid_width}x{self.grid_height} LED Animator - {name}"
+            )
             frame = self._call_animation(func, self.frame_index, self.sim_time_seconds)
             self._render_frame(frame)
 
 
 def main() -> None:
     # Allow optional CLI overrides
-    grid_size = int(os.environ.get("LED_GRID_SIZE", "64"))
-    pixel_scale = int(os.environ.get("LED_PIXEL_SCALE", "12"))
+    # Backwards compatibility: LED_GRID_SIZE sets both width and height if provided
+    legacy_size = os.environ.get("LED_GRID_SIZE")
+    default_width = 64
+    default_height = 128
+    grid_width = int(
+        os.environ.get("LED_GRID_WIDTH", legacy_size or str(default_width))
+    )
+    grid_height = int(
+        os.environ.get("LED_GRID_HEIGHT", legacy_size or str(default_height))
+    )
+    pixel_scale = int(os.environ.get("LED_PIXEL_SCALE", "10"))
     target_fps = int(os.environ.get("LED_TARGET_FPS", "60"))
     app = AnimatorApp(
-        grid_size=grid_size, pixel_scale=pixel_scale, target_fps=target_fps
+        grid_width=grid_width,
+        grid_height=grid_height,
+        pixel_scale=pixel_scale,
+        target_fps=target_fps,
     )
     app.run()
 

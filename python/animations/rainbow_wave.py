@@ -3,7 +3,7 @@ from typing import Tuple
 import numpy as np
 
 
-GridSize = 64
+GridSize = None  # unused; derive from output buffer
 
 
 def _hsv_to_rgb(h: np.ndarray, s: np.ndarray, v: np.ndarray) -> np.ndarray:
@@ -28,10 +28,11 @@ def _hsv_to_rgb(h: np.ndarray, s: np.ndarray, v: np.ndarray) -> np.ndarray:
     return np.clip(rgb * 255.0, 0, 255).astype(np.uint8)
 
 
-def rainbow_wave(frame_index: int, t_seconds: float) -> np.ndarray:
-    y, x = np.mgrid[0:GridSize, 0:GridSize]
-    hue = (x / GridSize + t_seconds * 0.1) % 1.0
+def rainbow_wave(frame_index: int, t_seconds: float, out: np.ndarray) -> None:
+    h, w, _ = out.shape
+    y, x = np.mgrid[0:h, 0:w]
+    hue = (x / max(1, w) + t_seconds * 0.1) % 1.0
     sat = np.ones_like(hue)
-    val = 0.6 + 0.4 * np.sin(2 * np.pi * (y / GridSize + t_seconds * 0.25))
+    val = 0.6 + 0.4 * np.sin(2 * np.pi * (y / max(1, h) + t_seconds * 0.25))
     val = np.clip(val, 0.0, 1.0)
-    return _hsv_to_rgb(hue, sat, val)
+    out[:] = _hsv_to_rgb(hue, sat, val)

@@ -1,7 +1,7 @@
 import numpy as np
 
 
-GridSize = 64
+GridSize = None  # unused; derive from output buffer
 
 
 def _hsv_to_rgb(h: np.ndarray, s: np.ndarray, v: np.ndarray) -> np.ndarray:
@@ -26,10 +26,11 @@ def _hsv_to_rgb(h: np.ndarray, s: np.ndarray, v: np.ndarray) -> np.ndarray:
     return np.clip(rgb * 255.0, 0, 255).astype(np.uint8)
 
 
-def plasma(frame_index: int, t_seconds: float) -> np.ndarray:
-    y, x = np.mgrid[0:GridSize, 0:GridSize]
-    x = x.astype(np.float32) / GridSize
-    y = y.astype(np.float32) / GridSize
+def plasma(frame_index: int, t_seconds: float, out: np.ndarray) -> None:
+    h, w, _ = out.shape
+    y, x = np.mgrid[0:h, 0:w]
+    x = x.astype(np.float32) / max(1, w)
+    y = y.astype(np.float32) / max(1, h)
     v = (
         np.sin(10.0 * (x + t_seconds * 0.20))
         + np.sin(10.0 * (y + t_seconds * 0.15))
@@ -38,4 +39,4 @@ def plasma(frame_index: int, t_seconds: float) -> np.ndarray:
     hue = (v * 0.5 + 0.5) % 1.0
     sat = np.ones_like(hue)
     val = 0.5 + 0.5 * hue
-    return _hsv_to_rgb(hue, sat, val)
+    out[:] = _hsv_to_rgb(hue, sat, val)

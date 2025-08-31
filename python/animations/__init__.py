@@ -21,7 +21,7 @@ for _mod in (_rainbow_wave, _bouncing_dot, _plasma):
         # Fallback: keep existing definitions if reload fails
         pass
 
-ANIMATIONS: List[Tuple[str, Callable[[int, float], np.ndarray]]] = [
+ANIMATIONS: List[Tuple[str, Callable[[int, float, np.ndarray], None]]] = [
     ("Rainbow Wave", _rainbow_wave.rainbow_wave),
     ("Bouncing Dot", _bouncing_dot.bouncing_dot),
     ("Plasma", _plasma.plasma),
