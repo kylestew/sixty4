@@ -18,6 +18,7 @@ from . import voronoi as _voronoi
 from . import scan_dots as _scan_dots
 from . import perlin_dithered as _perlin_dithered
 from . import sdf_sphere as _sdf_sphere
+from . import dithered_sine as _dithered_sine
 
 # Ensure submodules are reloaded when this package is reloaded
 for _mod in (
@@ -30,6 +31,7 @@ for _mod in (
     _scan_dots,
     _perlin_dithered,
     _sdf_sphere,
+    _dithered_sine,
 ):
     try:
         importlib.reload(_mod)
@@ -47,6 +49,7 @@ ANIMATIONS: List[Tuple[str, Callable[[int, float, np.ndarray], None]]] = [
     ("Voronoi", _voronoi.voronoi_noise),
     ("Perlin Dithered", _perlin_dithered.perlin_dithered),
     ("SDF Sphere", _sdf_sphere.sdf_sphere),
+    ("Dithered Sine Wave", _dithered_sine.dithered_sine_wave),
 ]
 
 __all__ = ["ANIMATIONS"]

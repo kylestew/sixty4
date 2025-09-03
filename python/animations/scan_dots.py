@@ -23,7 +23,7 @@ def cascading_dots(frame_index: int, t_seconds: float, out: np.ndarray) -> None:
 
     # Draw a new random set of dots on the top N rows
     # Hash-based pseudo-random mask per (x,y), stable for a given frame_index
-    N = 20
+    N = 24
     X = 10  # Change every X frames
     x = np.arange(w, dtype=np.uint64)
     stable_frame = frame_index // X
@@ -40,7 +40,7 @@ def cascading_dots(frame_index: int, t_seconds: float, out: np.ndarray) -> None:
     indices = np.arange(N * w, dtype=np.uint64)
 
     # Select every other index
-    mask = indices % 2 == 0
+    mask = indices % 3 == 0
 
     # Convert to row/col coordinates
     rows = indices[mask] // w

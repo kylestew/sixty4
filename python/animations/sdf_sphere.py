@@ -43,3 +43,5 @@ def sdf_sphere(frame_index: int, t_seconds: float, out: np.ndarray) -> None:
     out[..., 0] = gray
     out[..., 1] = gray
     out[..., 2] = gray
+
+
