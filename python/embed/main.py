@@ -25,21 +25,26 @@ HEIGHT = const(128)  # display driver is rotated 90
 # Frame buffer is rotated 90 degrees
 frame_buffer = bytearray(HEIGHT * WIDTH * 3)
 
-# Pre-computed 4x4 Bayer dither matrix (scaled to 0-240 range)
-_dither_matrix = bytearray(
-    [0, 128, 32, 160, 192, 64, 224, 96, 48, 176, 16, 144, 240, 112, 208, 80]
-)
+# Pre-computed 8x8 Bayer dither matrix (scaled to 0-240 range)
+DITHER_W = const(8)   # assuming an 8×8 Bayer matrix
+DITHER_H = const(8)
+bayer8 = bytes([
+     0, 128,  32, 160,   8, 136,  40, 168,
+    192,  64, 224,  96, 200,  72, 232, 104,
+     48, 176,  16, 144,  56, 184,  24, 152,
+    240, 112, 208,  80, 248, 120, 216,  88,
+     12, 140,  44, 172,   4, 132,  36, 164,
+    204,  76, 236, 108, 196,  68, 228, 100,
+     60, 188,  28, 156,  52, 180,  20, 148,
+    252, 124, 220,  92, 244, 116, 212,  84,
+])
 
+@micropython.viper
+def make_dither_ptr() -> ptr8:  # noqa: F821
+    return ptr8(bayer8)  # noqa: F821
 
-# No frame buffer needed - we'll shift content in-place
+dither_ptr = make_dither_ptr()
 
-
-# @micropython.viper
-# def make_dither_ptr() -> ptr8:  # noqa: F821
-#     return ptr8(_dither_matrix)  # noqa: F821
-
-
-# Buffer pointer no longer needed
 
 
 # @micropython.viper
@@ -58,49 +63,13 @@ _dither_matrix = bytearray(
 
 
 @micropython.viper
-def shift_content_down(graphics_ptr: ptr32):  # noqa: F821
-    pass
-
-
-#     """Shift existing content down by one row"""
-#     # Shift rows N_ROWS to HEIGHT-2 down to rows N_ROWS+1 to HEIGHT-1
-#     # Work from bottom up to avoid overwriting data we still need to copy
-#     for y in range(HEIGHT - 2, N_ROWS - 1, -1):
-#         src_row_start = int(y) * int(WIDTH)
-#         dst_row_start = (y + 1) * WIDTH
-#         for x in range(WIDTH):
-#             graphics_ptr[dst_row_start + x] = graphics_ptr[src_row_start + x]
-
-
-# @micropython.viper
-# def draw_dithered_rows(
-#     left_grey: int, right_grey: int, dither_ptr: ptr8, graphics_ptr: ptr32
-# ):  # noqa: F821
-#     """Draw dithered gradient in top N_ROWS rows"""
-#     for y in range(N_ROWS):
-#         graphics_row_start = y * WIDTH
-#         dither_y = y & 3  # y % 4
-#
-#         for x in range(WIDTH):
-#             # Linear interpolation between left and right grey values
-#             if WIDTH > 1:
-#                 x_norm = x / (WIDTH - 1)
-#             else:
-#                 x_norm = 0
-#             gradient_val = int(left_grey * (1.0 - x_norm) + right_grey * x_norm)
-#
-#             # Get dither threshold from 4x4 matrix
-#             dither_x = x & 3  # x % 4
-#             dither_idx = dither_y * 4 + dither_x
-#             threshold = int(dither_ptr[dither_idx])
-#
-#             # Apply dithering: white if gradient > threshold, else black
-#             if gradient_val > threshold:
-#                 color = 0xFFFFFF  # White
-#             else:
-#                 color = 0x000000  # Black
-#
-#             graphics_ptr[graphics_row_start + x] = color
+def bit_shift_down(graphics_ptr: ptr32):  # noqa: F821
+    # Work from bottom up to avoid overwriting data we still need to copy
+    for y in range(HEIGHT - 2, 0, -1):
+        src_row_start = int(y) * WIDTH
+        dst_row_start = int(y + 1) * WIDTH
+        for x in range(WIDTH * 3):
+            graphics_ptr[dst_row_start + x] = graphics_ptr[src_row_start + x]
 
 
 def write_pattern(frame_index: int, t_seconds: float, frame: memoryview, width: int) -> None:
@@ -109,7 +78,9 @@ def write_pattern(frame_index: int, t_seconds: float, frame: memoryview, width: 
     """
     height = len(frame) // (width * 3)
 
-    grey = int(t_seconds * 0.01) % 256
+    grey = int(t_seconds * 0.05) % 512
+    if grey > 255:
+        grey = 255 - grey
 
     for y in range(height):
         for x in range(width):
@@ -125,7 +96,40 @@ def write_pattern(frame_index: int, t_seconds: float, frame: memoryview, width: 
 
 
 @micropython.viper
-def blit(frame: ptr8, graphics: ptr32):  # noqa: F821
+def dither(frame: ptr8, dither_ptr: ptr8, height: int, width: int): # noqa: F821
+    """
+    Converts frame contents to greyscale and applys bayer dithering
+    """
+    for y in range(height):
+        row_base: int = y * width
+        my: int = y % DITHER_H
+
+        for x in range(width):
+            idx: int = (row_base + x) * 3
+
+            # Pull RGB directly from frame_buffer
+            r: int = frame[idx]
+            g: int = frame[idx + 1]
+            b: int = frame[idx + 2]
+
+            # integer-luma approx: Y ≈ 0.299R + 0.587G + 0.114B
+            # 77/150/29 are 256 * coefficients, then >> 8
+            gray: int = (r * 77 + g * 150 + b * 29) >> 8
+            
+            # lookup Bayer threshold
+            mx: int = x % DITHER_W
+            m_idx: int = my * DITHER_W + mx
+            thresh: int = dither_ptr[m_idx]
+
+            # apply threshold and write back as monochrome RGB
+            v: int = 255 if gray > thresh else 0
+            frame[idx] = v
+            frame[idx + 1] = v
+            frame[idx + 2] = v
+
+
+@micropython.viper
+def blit(frame: ptr8, graphics: ptr32, brightness: int):  # noqa: F821
     for y in range(HEIGHT):
         base: int = y * WIDTH * 3  # 3 bytes per pixel
         dx: int = y  # rotated x' = y
@@ -138,6 +142,16 @@ def blit(frame: ptr8, graphics: ptr32):  # noqa: F821
             g: int = frame[idx + 1]
             b: int = frame[idx + 2]
 
+            # Apply brightness scaling (fixed-point >> 8)
+            r: int = (r * brightness) >> 8
+            g: int = (g * brightness) >> 8
+            b: int = (b * brightness) >> 8
+
+            # Clamp to 255
+            if r > 255: r = 255
+            if g > 255: g = 255
+            if b > 255: b = 255
+
             # Pack into 0xRRGGBB (24-bit in 32-bit slot)
             val: int = (r << 16) | (g << 8) | b
 
@@ -147,8 +161,6 @@ def blit(frame: ptr8, graphics: ptr32):  # noqa: F821
 
             graphics[d_idx] = val
 
-
-# dither_ptr = make_dither_ptr()
 
 t_frames = 0
 start_time = time.ticks_ms()
@@ -167,7 +179,7 @@ while True:
 
     # === BIT SHIFT ===
     # Shift existing content before writing new pattern
-    # shift_content_down(memoryview(graphics))
+    bit_shift_down(memoryview(frame_buffer))
 
     # === MASK + WRITE ===
     # slice a section of the output buffer and write pattern to it
@@ -176,16 +188,18 @@ while True:
     region = memoryview(frame_buffer)[:sz_data]
     write_pattern(t_frames, current_time, region, WIDTH)
 
-    # TODO: convert to gradient pattern somehow
+    # === DITHER ===
+    dither(region, dither_ptr, HEIGHT, WIDTH)
+
+    ## TODO: apply gamma correct or bri correct
 
     # === BLIT ===
     # send internal frame buffer to output (rotated)
-    blit(memoryview(frame_buffer), memoryview(graphics))
+    blit(memoryview(frame_buffer), memoryview(graphics), 192)
 
     i75.update()
 
     # pause for a moment (important or the USB serial device will fail)
-    # time.sleep(0.001)
+    time.sleep(0.03)
 
-    time.sleep(0.1)
     t_frames += 1
