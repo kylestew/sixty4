@@ -46,22 +46,6 @@ def make_dither_ptr() -> ptr8:  # noqa: F821
 dither_ptr = make_dither_ptr()
 
 
-
-# @micropython.viper
-# def triangle_wave(t_ms: int, period_ms: int, phase_offset: int) -> int:
-#    """Generate triangle wave value 0-255 for given time and period"""
-#     # Add phase offset (in ms)
-#     t_phase = (t_ms + phase_offset) % period_ms
-#     # Normalize to 0.0 - 1.0
-#     t_norm = t_phase / period_ms
-#     # Triangle wave: 0 -> 1 -> 0
-#     if t_norm <= 0.5:
-#         wave_val = 2.0 * t_norm
-#     else:
-#         wave_val = 2.0 * (1.0 - t_norm)
-#     return int(wave_val * 255)
-
-
 @micropython.viper
 def bit_shift_down(graphics_ptr: ptr32):  # noqa: F821
     # Work from bottom up to avoid overwriting data we still need to copy
@@ -74,16 +58,21 @@ def bit_shift_down(graphics_ptr: ptr32):  # noqa: F821
 
 def write_pattern(frame_index: int, t_seconds: float, frame: memoryview, width: int) -> None:
     """
+    THE MAIN EVENT - generates the visuals
+
     t_seconds is integer milliseconds
     """
     height = len(frame) // (width * 3)
 
-    grey = int(t_seconds * 0.05) % 512
-    if grey > 255:
-        grey = 255 - grey
+    t_offset = t_seconds * 0.05
 
     for y in range(height):
         for x in range(width):
+            grey = int((math.sin(x * 0.5 + t_offset) + 1) * 255) % 512
+            if grey > 255:
+                grey = 255 - grey
+
+
             idx = (y * width + x) * 3
 
             # r = (x + int(t_seconds * 30)) % 256
