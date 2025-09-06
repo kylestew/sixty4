@@ -1,6 +1,4 @@
-//! Blinks the LED on a Pico board
-//!
-//! This will blink an LED attached to GP25, which is the pin the Pico uses for the on-board LED.
+//! Toggles a pin on the Pico board
 #![no_std]
 #![no_main]
 
@@ -8,8 +6,7 @@
 use cortex_m_rt::entry;
 
 // Ensure we halt program on panic (simply needs to be linked here)
-use panic_halt as _;
-// use panic_probe as _;
+use panic_probe as _;
 
 // Alias for our HAL crate
 use rp235x_hal as hal;
@@ -22,8 +19,8 @@ use embedded_hal::digital::OutputPin;
 use rp235x_hal::clocks::Clock;
 
 // Logging
-// use defmt::*;
-// use defmt_rtt as _;
+use defmt::*;
+use defmt_rtt as _;
 
 /// Tell the Boot ROM about our application
 #[unsafe(link_section = ".start_block")]
@@ -32,7 +29,7 @@ pub static IMAGE_DEF: hal::block::ImageDef = hal::block::ImageDef::secure_exe();
 
 #[entry]
 fn main() -> ! {
-    // info!("Program start");
+    info!("Program start");
 
     // grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
@@ -73,10 +70,10 @@ fn main() -> ! {
     let mut led_pin = pins.gpio16.into_push_pull_output();
 
     loop {
-        // info!("on!");
+        info!("on!");
         led_pin.set_high().unwrap();
         delay.delay_ms(500);
-        // info!("off!");
+        info!("off!");
         led_pin.set_low().unwrap();
         delay.delay_ms(500);
     }
